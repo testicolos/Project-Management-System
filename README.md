@@ -1,6 +1,6 @@
-# Project Command
+# Project Managment
 
-Project Command is a production Next.js application for running company-scoped project portfolios. It supports administrator and read-only access, Current/Pending/Finalized projects, QAR-only costs, Asia/Qatar dates and times, project and task notes, task-derived progress, document storage, and user administration.
+Project Managment is a production Next.js application for running company-scoped project portfolios. It supports administrator and read-only access, Current/Pending/Finalized projects, QAR-only costs, Asia/Qatar dates and times, project and task notes, task-derived progress, document storage, and user administration.
 
 ## Stack
 

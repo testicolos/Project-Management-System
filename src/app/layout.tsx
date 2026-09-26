@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Project Command",
-    template: "%s · Project Command",
+    default: "Project Managment",
+    template: "%s · Project Managment",
   },
   description: "A secure command center for company projects, tasks, costs, notes, documents, and access.",
   icons: { icon: "/icon.svg" },
   manifest: "/manifest.webmanifest",
-  appleWebApp: { capable: true, title: "Project Command", statusBarStyle: "black-translucent" },
+  appleWebApp: { capable: true, title: "Project Managment", statusBarStyle: "black-translucent" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

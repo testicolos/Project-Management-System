@@ -18,14 +18,15 @@ test("administrator can navigate the complete project workspace", async ({ page 
   const errors: string[] = [];
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await signIn(page);
+  await expect(page.locator(".brand-name")).toHaveText("Project Managment");
   await expect(page.getByText("QAR only")).toBeVisible();
   await expect(page.locator(".metric").filter({ hasText: "Finalized" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Companies" })).toBeVisible();
   await page.getByRole("link", { name: /Head Office/ }).click();
   await expect(page).toHaveURL(/\/projects\?company=/);
   const companyId = new URL(page.url()).searchParams.get("company");
-  await page.getByRole("link", { name: /Project Command rollout/ }).click();
-  await expect(page.getByRole("heading", { name: "Project Command rollout" })).toBeVisible();
+  await page.getByRole("link", { name: /Project Managment rollout/ }).click();
+  await expect(page.getByRole("heading", { name: "Project Managment rollout" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Delivery tasks" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Project notes" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
@@ -50,7 +51,7 @@ test("document upload and download round-trip", async ({ page }, testInfo) => {
   const fixtureName = "verification.txt";
   try {
     await signIn(page);
-    await page.getByRole("link", { name: /Project Command rollout/ }).click();
+    await page.getByRole("link", { name: /Project Managment rollout/ }).click();
     await page.getByRole("button", { name: "Upload" }).click();
     await page.getByLabel("Document name").fill("Verification evidence");
     await page.locator('input[type="file"]').setInputFiles(path.join(process.cwd(), "tests", "fixtures", fixtureName));
@@ -62,7 +63,7 @@ test("document upload and download round-trip", async ({ page }, testInfo) => {
     const download = await downloadPromise;
     const downloadedPath = await download.path();
     expect(downloadedPath).toBeTruthy();
-    expect(await readFile(downloadedPath!, "utf8")).toContain("Project Command document verification");
+    expect(await readFile(downloadedPath!, "utf8")).toContain("Project Managment document verification");
   } finally {
     await db.delete(documents).where(eq(documents.name, "Verification evidence.txt"));
   }
@@ -98,6 +99,8 @@ test("app exposes an installable desktop PWA manifest", async ({ page, request }
   const manifestResponse = await request.get("/manifest.webmanifest");
   expect(manifestResponse.ok()).toBe(true);
   const manifest = await manifestResponse.json();
+  expect(manifest.name).toBe("Project Managment");
+  expect(manifest.short_name).toBe("Project Managment");
   expect(manifest.display).toBe("standalone");
   expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({ sizes: "192x192" }), expect.objectContaining({ sizes: "512x512" })]));
   const workerResponse = await request.get("/sw.js");
@@ -112,7 +115,7 @@ test("administrator can add a project note and change task status inline", async
   const [task] = await db.select({ id: tasks.id, status: tasks.status }).from(tasks).where(eq(tasks.title, "Confirm company portfolio access")).limit(1);
   try {
     await signIn(page);
-    await page.getByRole("link", { name: /Project Command rollout/ }).click();
+    await page.getByRole("link", { name: /Project Managment rollout/ }).click();
     await page.getByRole("button", { name: "Add note" }).click();
     const dialog = page.locator("dialog[open]");
     await dialog.getByLabel("Note", { exact: true }).fill(noteText);

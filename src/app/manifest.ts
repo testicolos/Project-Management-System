@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Project Command",
-    short_name: "Project Command",
+    name: "Project Managment",
+    short_name: "Project Managment",
     description: "Company project portfolios, delivery tasks, notes, documents, and QAR commitments.",
     start_url: "/",
     scope: "/",

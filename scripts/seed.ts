@@ -1,5 +1,5 @@
 import { hash } from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../src/db";
 import { companies, projects, tasks, userCompanyAccess, users } from "../src/db/schema";
 
@@ -11,7 +11,7 @@ async function seed() {
 
   const passwordHash = await hash(password, 12);
   const [admin] = await db.insert(users).values({
-    name: "Project Command Admin",
+    name: "Project Managment Admin",
     username,
     email: email.toLowerCase(),
     passwordHash,
@@ -19,7 +19,7 @@ async function seed() {
     active: true,
   }).onConflictDoUpdate({
     target: users.email,
-    set: { username, passwordHash, role: "ADMIN", active: true, updatedAt: new Date() },
+    set: { name: "Project Managment Admin", username, passwordHash, role: "ADMIN", active: true, updatedAt: new Date() },
   }).returning({ id: users.id });
 
   const [company] = await db.insert(companies).values({ name: "Head Office", code: "HQ" })
@@ -27,14 +27,18 @@ async function seed() {
     .returning({ id: companies.id });
   await db.insert(userCompanyAccess).values({ userId: admin.id, companyId: company.id }).onConflictDoNothing();
 
+  const projectName = "Project Managment rollout";
+  const projectDescription = "Launch the organization-wide project management system and onboard the operating team.";
   const [existingProject] = await db.select({ id: projects.id }).from(projects)
-    .where(and(eq(projects.companyId, company.id), eq(projects.name, "Project Command rollout"))).limit(1);
+    .where(and(eq(projects.companyId, company.id), inArray(projects.name, ["Project Command rollout", projectName]))).limit(1);
   let projectId = existingProject?.id;
-  if (!projectId) {
+  if (projectId) {
+    await db.update(projects).set({ name: projectName, description: projectDescription, updatedAt: new Date() }).where(eq(projects.id, projectId));
+  } else {
     const [project] = await db.insert(projects).values({
       companyId: company.id,
-      name: "Project Command rollout",
-      description: "Launch the organization-wide project command system and onboard the operating team.",
+      name: projectName,
+      description: projectDescription,
       status: "CURRENT",
       costQar: "0.00",
       startDate: new Date().toISOString().slice(0, 10),
