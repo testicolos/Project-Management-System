@@ -19,7 +19,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   if (!project) notFound();
   const isAdmin = user.role === "ADMIN";
   return <>
-    <Link href="/projects" className="button ghost" style={{ marginBottom: ".7rem" }}><ArrowLeft /> Back to projects</Link>
+    <Link href={`/projects?company=${project.companyId}`} className="button ghost" style={{ marginBottom: ".7rem" }}><ArrowLeft /> Back to company portfolio</Link>
     <Flash success={flash.success} error={flash.error} />
     <section className="detail-hero">
       <div className="detail-title"><div><div className="eyebrow">{project.companyName} · {project.companyCode}</div><h1>{project.name}</h1><p className="lede">{project.description || "No project description yet."}</p></div><div className="toolbar"><StatusBadge status={project.status} />{isAdmin && <Modal title="Edit project" trigger={<button type="button" className="button secondary"><Pencil /> Edit</button>}><ProjectForm companies={companies} project={project} /></Modal>}</div></div>

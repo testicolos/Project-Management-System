@@ -182,7 +182,7 @@ export async function deleteDocument(formData: FormData) {
   to(`/projects/${projectId}`, "success", "Document removed");
 }
 
-export type CreateUserState = { message: string; success?: boolean };
+export type CreateUserState = { message: string };
 
 export async function createUser(_previousState: CreateUserState, formData: FormData): Promise<CreateUserState> {
   await requireAdmin();
@@ -191,14 +191,20 @@ export async function createUser(_previousState: CreateUserState, formData: Form
       name: value(formData, "name"), username: value(formData, "username"), email: value(formData, "email"), password: value(formData, "password"),
       role: value(formData, "role"), companyIds: formData.getAll("companyIds").map(String),
     });
+    const [usernameMatch, emailMatch] = await Promise.all([
+      db.select({ id: users.id }).from(users).where(eq(users.username, input.username)).limit(1),
+      db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1),
+    ]);
+    if (usernameMatch.length) return { message: "That username is already in use" };
+    if (emailMatch.length) return { message: "That email address is already in use" };
     const passwordHash = await hash(input.password, 12);
     const [user] = await db.insert(users).values({ name: input.name, username: input.username, email: input.email, passwordHash, role: input.role }).returning({ id: users.id });
     await db.insert(userCompanyAccess).values(input.companyIds.map((companyId) => ({ userId: user.id, companyId })));
     revalidatePath("/users");
-    return { message: "User created", success: true };
   } catch (error) {
     return { message: message(error) };
   }
+  to("/users", "success", "User created");
 }
 
 export async function updateUser(formData: FormData) {

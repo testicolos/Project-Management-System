@@ -15,6 +15,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     <section className="metrics" aria-label="Portfolio summary">
       <article className="metric"><div className="metric-label">Current</div><div className="metric-value">{summary.counts.CURRENT}</div><div className="metric-note">Projects in delivery</div></article>
       <article className="metric"><div className="metric-label">Pending</div><div className="metric-value">{summary.counts.PENDING}</div><div className="metric-note">Awaiting start</div></article>
+      <article className="metric"><div className="metric-label">Finalized</div><div className="metric-value">{summary.counts.FINALIZED}</div><div className="metric-note">Completed projects</div></article>
       <article className="metric"><div className="metric-label">Portfolio cost</div><div className="metric-value" style={{ fontSize: "clamp(1.2rem, 2.3vw, 1.7rem)" }}>{formatQar(summary.totalCost)}</div><div className="metric-note">QAR only</div></article>
       <article className="metric"><div className="metric-label">Average progress</div><div className="metric-value">{summary.averageProgress}%</div><div className="metric-note">Calculated from tasks</div></article>
     </section>

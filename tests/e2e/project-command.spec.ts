@@ -19,14 +19,19 @@ test("administrator can navigate the complete project workspace", async ({ page 
   page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await signIn(page);
   await expect(page.getByText("QAR only")).toBeVisible();
+  await expect(page.locator(".metric").filter({ hasText: "Finalized" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Companies" })).toBeVisible();
   await page.getByRole("link", { name: /Head Office/ }).click();
   await expect(page).toHaveURL(/\/projects\?company=/);
+  const companyId = new URL(page.url()).searchParams.get("company");
   await page.getByRole("link", { name: /Project Command rollout/ }).click();
   await expect(page.getByRole("heading", { name: "Project Command rollout" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Delivery tasks" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Project notes" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to company portfolio" })).toHaveAttribute("href", `/projects?company=${companyId}`);
+  await page.getByRole("link", { name: "Back to company portfolio" }).click();
+  await expect(page).toHaveURL(new RegExp(`/projects\\?company=${companyId}`));
   await page.getByRole("link", { name: "Users" }).click();
   await expect(page.getByRole("heading", { name: "Users & access" })).toBeVisible();
   expect(errors).toEqual([]);
@@ -139,7 +144,18 @@ test("create-user errors stay in the popup and an 8-character password is accept
     await expect(dialog).toBeVisible();
     await dialog.locator('input[name="companyIds"]').first().check();
     await dialog.getByRole("button", { name: "Create user" }).click();
-    await expect(dialog.getByRole("status")).toContainText("User created", { timeout: 15_000 });
+    await expect(page.getByText("User created")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await expect(page.locator(".user-row-table").filter({ hasText: "QA Created User" })).toBeVisible();
+    await page.getByRole("button", { name: "New user" }).click();
+    const duplicateDialog = page.locator("dialog[open]");
+    await duplicateDialog.getByLabel("Full name").fill("Duplicate Username Check");
+    await duplicateDialog.getByLabel("Username").fill("qa-created");
+    await duplicateDialog.getByLabel("Email").fill("qa-created-second@projectcommand.local");
+    await duplicateDialog.getByLabel("Temporary password").fill("Eight@99");
+    await duplicateDialog.locator('input[name="companyIds"]').first().check();
+    await duplicateDialog.getByRole("button", { name: "Create user" }).click();
+    await expect(duplicateDialog.getByRole("alert")).toHaveText("That username is already in use");
   } finally {
     await db.delete(users).where(eq(users.email, email));
   }
