@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import path from "node:path";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { documents, projects } from "@/db/schema";
@@ -22,12 +23,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const formData = await request.formData();
   const file = formData.get("document");
+  const requestedName = String(formData.get("displayName") ?? "").trim().replace(/[\\/\0]/g, "");
   if (!(file instanceof File) || file.size === 0) return back(request, id, "error", "Choose a file to upload");
+  if (!requestedName) return back(request, id, "error", "Enter a document name");
   if (file.size > maxBytes) return back(request, id, "error", "File exceeds the 4 MB limit");
   if (!acceptedTypes.has(file.type)) return back(request, id, "error", "This file type is not supported");
+  const originalExtension = path.extname(file.name).slice(0, 16);
+  const customExtension = path.extname(requestedName);
+  const documentName = `${requestedName}${customExtension || !originalExtension ? "" : originalExtension}`.slice(0, 255);
   await db.insert(documents).values({
     projectId: id,
-    name: file.name.slice(0, 255),
+    name: documentName,
     mimeType: file.type,
     sizeBytes: String(file.size),
     content: Buffer.from(await file.arrayBuffer()),

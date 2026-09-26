@@ -18,6 +18,7 @@ function secret() {
 export type SessionUser = {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: UserRole;
   companyIds: string[];
@@ -55,6 +56,7 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
     const [user] = await db.select({
       id: users.id,
       name: users.name,
+      username: users.username,
       email: users.email,
       role: users.role,
     }).from(users).where(and(eq(users.id, payload.sub), eq(users.active, true))).limit(1);

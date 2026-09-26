@@ -1,7 +1,9 @@
 import { z } from "zod";
 
 export const emailSchema = z.string().trim().toLowerCase().email().max(255);
-export const passwordSchema = z.string().min(10).max(128).regex(/[A-Z]/, "Use at least one uppercase letter").regex(/[a-z]/, "Use at least one lowercase letter").regex(/\d/, "Use at least one number");
+export const usernameSchema = z.string().trim().toLowerCase().min(3, "Username must be at least 3 characters").max(64).regex(/^[a-z0-9._-]+$/, "Use only letters, numbers, dots, underscores, or hyphens");
+export const passwordSchema = z.string().min(8, "Password must be at least 8 characters").max(128).regex(/[A-Z]/, "Use at least one uppercase letter").regex(/[a-z]/, "Use at least one lowercase letter").regex(/\d/, "Use at least one number");
+export const projectNoteSchema = z.string().trim().min(1, "Enter a note").max(10_000);
 
 export const companySchema = z.object({
   name: z.string().trim().min(2).max(160),
@@ -33,6 +35,7 @@ export const taskSchema = z.object({
 
 export const userSchema = z.object({
   name: z.string().trim().min(2).max(120),
+  username: usernameSchema,
   email: emailSchema,
   password: passwordSchema,
   role: z.enum(["ADMIN", "READ_ONLY"]),

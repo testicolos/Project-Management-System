@@ -5,19 +5,21 @@ import { companies, projects, tasks, userCompanyAccess, users } from "../src/db/
 
 async function seed() {
   const email = process.env.SEED_ADMIN_EMAIL ?? "admin@projectcommand.qa";
+  const username = (process.env.SEED_ADMIN_USERNAME ?? "Admin").toLowerCase();
   const password = process.env.SEED_ADMIN_PASSWORD;
   if (!password) throw new Error("SEED_ADMIN_PASSWORD is required for the initial seed");
 
   const passwordHash = await hash(password, 12);
   const [admin] = await db.insert(users).values({
     name: "Project Command Admin",
+    username,
     email: email.toLowerCase(),
     passwordHash,
     role: "ADMIN",
     active: true,
   }).onConflictDoUpdate({
     target: users.email,
-    set: { passwordHash, role: "ADMIN", active: true, updatedAt: new Date() },
+    set: { username, passwordHash, role: "ADMIN", active: true, updatedAt: new Date() },
   }).returning({ id: users.id });
 
   const [company] = await db.insert(companies).values({ name: "Head Office", code: "HQ" })

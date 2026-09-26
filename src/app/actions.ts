@@ -1,13 +1,13 @@
 "use server";
 
-import { hash } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { companies, documents, projects, tasks, userCompanyAccess, users } from "@/db/schema";
-import { assertCompanyAccess, clearSession, requireAdmin } from "@/lib/auth";
-import { companySchema, passwordSchema, projectSchema, taskSchema, userSchema } from "@/lib/validation";
+import { companies, documents, projectNotes, projects, tasks, userCompanyAccess, users } from "@/db/schema";
+import { assertCompanyAccess, clearSession, requireAdmin, requireUser } from "@/lib/auth";
+import { companySchema, passwordSchema, projectNoteSchema, projectSchema, taskSchema, userSchema } from "@/lib/validation";
 import { qatarLocalToDate } from "@/lib/utils";
 
 function value(formData: FormData, key: string) {
@@ -19,7 +19,7 @@ function message(error: unknown) {
     const issue = (error as { issues: Array<{ message: string }> }).issues[0];
     return issue?.message ?? "Please check the form";
   }
-  if (error instanceof Error && error.message.includes("unique")) return "That value is already in use";
+  if (error instanceof Error && (error.message.includes("unique") || error.message.includes("duplicate key"))) return "That username or email is already in use";
   return error instanceof Error ? error.message : "Something went wrong";
 }
 
@@ -136,6 +136,40 @@ export async function updateTask(formData: FormData) {
   to(`/projects/${projectId}`, "success", "Task updated");
 }
 
+export async function updateTaskStatus(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = value(formData, "id");
+  const projectId = value(formData, "projectId");
+  try {
+    const status = value(formData, "status");
+    if (status !== "TODO" && status !== "IN_PROGRESS" && status !== "DONE") throw new Error("Invalid task status");
+    const [project] = await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    if (!project) throw new Error("Project not found");
+    assertCompanyAccess(admin, project.companyId);
+    await db.update(tasks).set({ status, updatedAt: new Date() }).where(and(eq(tasks.id, id), eq(tasks.projectId, projectId)));
+    revalidatePath(`/projects/${projectId}`);
+    revalidatePath("/");
+  } catch (error) {
+    to(`/projects/${projectId}`, "error", message(error));
+  }
+}
+
+export async function createProjectNote(formData: FormData) {
+  const admin = await requireAdmin();
+  const projectId = value(formData, "projectId");
+  try {
+    const [project] = await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, projectId)).limit(1);
+    if (!project) throw new Error("Project not found");
+    assertCompanyAccess(admin, project.companyId);
+    const content = projectNoteSchema.parse(value(formData, "content"));
+    await db.insert(projectNotes).values({ projectId, content, authorId: admin.id });
+    revalidatePath(`/projects/${projectId}`);
+  } catch (error) {
+    to(`/projects/${projectId}`, "error", message(error));
+  }
+  to(`/projects/${projectId}`, "success", "Note added");
+}
+
 export async function deleteDocument(formData: FormData) {
   const admin = await requireAdmin();
   const id = value(formData, "id");
@@ -148,21 +182,23 @@ export async function deleteDocument(formData: FormData) {
   to(`/projects/${projectId}`, "success", "Document removed");
 }
 
-export async function createUser(formData: FormData) {
+export type CreateUserState = { message: string; success?: boolean };
+
+export async function createUser(_previousState: CreateUserState, formData: FormData): Promise<CreateUserState> {
   await requireAdmin();
   try {
     const input = userSchema.parse({
-      name: value(formData, "name"), email: value(formData, "email"), password: value(formData, "password"),
+      name: value(formData, "name"), username: value(formData, "username"), email: value(formData, "email"), password: value(formData, "password"),
       role: value(formData, "role"), companyIds: formData.getAll("companyIds").map(String),
     });
     const passwordHash = await hash(input.password, 12);
-    const [user] = await db.insert(users).values({ name: input.name, email: input.email, passwordHash, role: input.role }).returning({ id: users.id });
+    const [user] = await db.insert(users).values({ name: input.name, username: input.username, email: input.email, passwordHash, role: input.role }).returning({ id: users.id });
     await db.insert(userCompanyAccess).values(input.companyIds.map((companyId) => ({ userId: user.id, companyId })));
     revalidatePath("/users");
+    return { message: "User created", success: true };
   } catch (error) {
-    to("/users", "error", message(error));
+    return { message: message(error) };
   }
-  to("/users", "success", "User created");
 }
 
 export async function updateUser(formData: FormData) {
@@ -195,4 +231,21 @@ export async function resetUserPassword(formData: FormData) {
     to("/users", "error", message(error));
   }
   to("/users", "success", "Password reset");
+}
+
+export async function changeOwnPassword(formData: FormData) {
+  const user = await requireUser();
+  try {
+    const currentPassword = value(formData, "currentPassword");
+    const newPassword = passwordSchema.parse(value(formData, "newPassword"));
+    if (newPassword !== value(formData, "confirmPassword")) throw new Error("New passwords do not match");
+    const [record] = await db.select({ passwordHash: users.passwordHash }).from(users).where(eq(users.id, user.id)).limit(1);
+    if (!record || !(await compare(currentPassword, record.passwordHash))) throw new Error("Current password is incorrect");
+    if (await compare(newPassword, record.passwordHash)) throw new Error("Choose a password different from your current password");
+    await db.update(users).set({ passwordHash: await hash(newPassword, 12), updatedAt: new Date() }).where(eq(users.id, user.id));
+  } catch (error) {
+    to("/account", "error", message(error));
+  }
+  await clearSession();
+  to("/login", "success", "Password changed. Sign in with your new password");
 }

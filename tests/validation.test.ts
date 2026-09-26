@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passwordSchema, projectSchema, userSchema } from "@/lib/validation";
+import { passwordSchema, projectSchema, userSchema, usernameSchema } from "@/lib/validation";
 
 describe("application validation", () => {
   it("rejects negative costs", () => {
@@ -12,6 +12,8 @@ describe("application validation", () => {
   });
   it("requires strong passwords and at least one company", () => {
     expect(passwordSchema.safeParse("weakpassword").success).toBe(false);
-    expect(userSchema.safeParse({ name: "Viewer User", email: "viewer@example.com", password: "StrongPass123", role: "READ_ONLY", companyIds: [] }).success).toBe(false);
+    expect(passwordSchema.safeParse("Admin@99").success).toBe(true);
+    expect(usernameSchema.parse("Admin.User")).toBe("admin.user");
+    expect(userSchema.safeParse({ name: "Viewer User", username: "viewer", email: "viewer@example.com", password: "StrongPass123", role: "READ_ONLY", companyIds: [] }).success).toBe(false);
   });
 });

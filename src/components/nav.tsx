@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, FolderKanban, LayoutDashboard, UsersRound } from "lucide-react";
+import { Building2, FolderKanban, KeyRound, LayoutDashboard, UsersRound } from "lucide-react";
 
 const items = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/account", label: "Account", icon: KeyRound },
   { href: "/companies", label: "Companies", icon: Building2, admin: true },
   { href: "/users", label: "Users", icon: UsersRound, admin: true },
 ];

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, documents, projects, tasks, userCompanyAccess, users, type ProjectStatus } from "@/db/schema";
+import { companies, documents, projectNotes, projects, tasks, userCompanyAccess, users, type ProjectStatus } from "@/db/schema";
 import type { SessionUser } from "./auth";
 
 const progressSql = sql<number>`CASE WHEN count(${tasks.id}) = 0 THEN 0 ELSE round((count(${tasks.id}) FILTER (WHERE ${tasks.status} = 'DONE'))::numeric / count(${tasks.id}) * 100)::int END`;
@@ -66,7 +66,7 @@ export async function getProjectForUser(user: SessionUser, id: string) {
     .limit(1);
   if (!project) return null;
 
-  const [projectTasks, projectDocuments] = await Promise.all([
+  const [projectTasks, projectDocuments, notes] = await Promise.all([
     db.select().from(tasks).where(eq(tasks.projectId, id)).orderBy(asc(tasks.sortOrder), asc(tasks.createdAt)),
     db.select({
       id: documents.id,
@@ -79,12 +79,22 @@ export async function getProjectForUser(user: SessionUser, id: string) {
       .innerJoin(users, eq(users.id, documents.uploadedBy))
       .where(eq(documents.projectId, id))
       .orderBy(desc(documents.createdAt)),
+    db.select({
+      id: projectNotes.id,
+      content: projectNotes.content,
+      createdAt: projectNotes.createdAt,
+      authorName: users.name,
+    }).from(projectNotes)
+      .innerJoin(users, eq(users.id, projectNotes.authorId))
+      .where(eq(projectNotes.projectId, id))
+      .orderBy(desc(projectNotes.createdAt)),
   ]);
   const done = projectTasks.filter((task) => task.status === "DONE").length;
   return {
     ...project,
     tasks: projectTasks,
     documents: projectDocuments,
+    notes,
     progress: projectTasks.length ? Math.round(done / projectTasks.length * 100) : 0,
   };
 }
@@ -107,6 +117,7 @@ export async function getUsersWithAccess() {
   const allUsers = await db.select({
     id: users.id,
     name: users.name,
+    username: users.username,
     email: users.email,
     role: users.role,
     active: users.active,

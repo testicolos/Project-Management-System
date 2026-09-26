@@ -20,13 +20,17 @@ export const companies = pgTable("companies", {
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
+  username: varchar("username", { length: 64 }).notNull(),
   email: varchar("email", { length: 255 }).notNull(),
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").default("READ_ONLY").notNull(),
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [uniqueIndex("users_email_unique").on(table.email)]);
+}, (table) => [
+  uniqueIndex("users_username_unique").on(table.username),
+  uniqueIndex("users_email_unique").on(table.email),
+]);
 
 export const userCompanyAccess = pgTable("user_company_access", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
@@ -66,6 +70,14 @@ export const tasks = pgTable("tasks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("tasks_project_idx").on(table.projectId)]);
+
+export const projectNotes = pgTable("project_notes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  projectId: uuid("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  authorId: uuid("author_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("project_notes_project_idx").on(table.projectId)]);
 
 export const documents = pgTable("documents", {
   id: uuid("id").defaultRandom().primaryKey(),
