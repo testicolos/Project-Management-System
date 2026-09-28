@@ -29,13 +29,14 @@ export async function getProjectTypesWithCount() {
     .orderBy(asc(projectTypes.name));
 }
 
-export async function getProjectsForUser(user: SessionUser, filters?: { status?: ProjectStatus; companyId?: string }) {
+export async function getProjectsForUser(user: SessionUser, filters?: { status?: ProjectStatus; companyId?: string; projectTypeId?: string }) {
   const allowed = filters?.companyId && user.companyIds.includes(filters.companyId)
     ? [filters.companyId]
     : user.companyIds;
   if (allowed.length === 0) return [];
   const conditions = [inArray(projects.companyId, allowed)];
   if (filters?.status) conditions.push(eq(projects.status, filters.status));
+  if (filters?.projectTypeId) conditions.push(eq(projects.projectTypeId, filters.projectTypeId));
   return db.select({
     id: projects.id,
     name: projects.name,
