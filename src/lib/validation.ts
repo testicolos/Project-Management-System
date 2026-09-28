@@ -10,8 +10,11 @@ export const companySchema = z.object({
   code: z.string().trim().toUpperCase().min(2).max(24).regex(/^[A-Z0-9-]+$/),
 });
 
+export const projectTypeSchema = z.string().trim().min(2, "Enter a project type").max(80);
+
 export const projectSchema = z.object({
   companyId: z.string().uuid(),
+  projectTypeId: z.string().uuid("Choose a project type"),
   name: z.string().trim().min(2).max(180),
   description: z.string().trim().max(4000).default(""),
   status: z.enum(["CURRENT", "PENDING", "FINALIZED"]),
