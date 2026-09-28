@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, documents, projectNotes, projects, tasks, userCompanyAccess, users, type ProjectStatus } from "@/db/schema";
+import { companies, documents, projectNotes, projects, projectTypes, tasks, userCompanyAccess, users, type ProjectStatus } from "@/db/schema";
 import type { SessionUser } from "./auth";
 
 const progressSql = sql<number>`CASE WHEN count(${tasks.id}) = 0 THEN 0 ELSE round((count(${tasks.id}) FILTER (WHERE ${tasks.status} = 'DONE'))::numeric / count(${tasks.id}) * 100)::int END`;
@@ -12,6 +12,21 @@ export async function getCompaniesForUser(user: SessionUser) {
 
 export async function getAllCompanies() {
   return db.select().from(companies).orderBy(asc(companies.name));
+}
+
+export async function getProjectTypes() {
+  return db.select().from(projectTypes).orderBy(asc(projectTypes.name));
+}
+
+export async function getProjectTypesWithCount() {
+  return db.select({
+    id: projectTypes.id,
+    name: projectTypes.name,
+    projectCount: sql<number>`count(${projects.id})::int`,
+  }).from(projectTypes)
+    .leftJoin(projects, eq(projects.projectTypeId, projectTypes.id))
+    .groupBy(projectTypes.id)
+    .orderBy(asc(projectTypes.name));
 }
 
 export async function getProjectsForUser(user: SessionUser, filters?: { status?: ProjectStatus; companyId?: string }) {
@@ -26,6 +41,8 @@ export async function getProjectsForUser(user: SessionUser, filters?: { status?:
     name: projects.name,
     description: projects.description,
     status: projects.status,
+    projectTypeId: projects.projectTypeId,
+    projectTypeName: projectTypes.name,
     costQar: projects.costQar,
     startDate: projects.startDate,
     targetDate: projects.targetDate,
@@ -38,9 +55,10 @@ export async function getProjectsForUser(user: SessionUser, filters?: { status?:
     progress: progressSql,
   }).from(projects)
     .innerJoin(companies, eq(companies.id, projects.companyId))
+    .leftJoin(projectTypes, eq(projectTypes.id, projects.projectTypeId))
     .leftJoin(tasks, eq(tasks.projectId, projects.id))
     .where(and(...conditions))
-    .groupBy(projects.id, companies.id)
+    .groupBy(projects.id, companies.id, projectTypes.id)
     .orderBy(sql`CASE ${projects.status} WHEN 'CURRENT' THEN 1 WHEN 'PENDING' THEN 2 ELSE 3 END`, asc(projects.targetDate), asc(projects.name));
 }
 
@@ -51,6 +69,8 @@ export async function getProjectForUser(user: SessionUser, id: string) {
     name: projects.name,
     description: projects.description,
     status: projects.status,
+    projectTypeId: projects.projectTypeId,
+    projectTypeName: projectTypes.name,
     costQar: projects.costQar,
     startDate: projects.startDate,
     targetDate: projects.targetDate,
@@ -62,6 +82,7 @@ export async function getProjectForUser(user: SessionUser, id: string) {
     companyCode: companies.code,
   }).from(projects)
     .innerJoin(companies, eq(companies.id, projects.companyId))
+    .leftJoin(projectTypes, eq(projectTypes.id, projects.projectTypeId))
     .where(and(eq(projects.id, id), inArray(projects.companyId, user.companyIds)))
     .limit(1);
   if (!project) return null;
