@@ -64,7 +64,7 @@ h3 { font-size:.95rem; }
 .panel-head h2 { margin:0; }
 .panel-body { padding:1rem 1.1rem; }
 .stack { display:grid; gap:.75rem; }
-.project-row { display:grid; grid-template-columns:minmax(0,1fr) 8rem 8rem 7rem auto; align-items:center; gap:1rem; padding:1rem 1.1rem; border-bottom:1px solid rgba(142,190,221,.1); transition:background .15s ease; }
+.project-row { display:grid; grid-template-columns:minmax(0,1fr) 11rem 8rem 7rem auto; align-items:center; gap:1rem; padding:1rem 1.1rem; border-bottom:1px solid rgba(142,190,221,.1); transition:background .15s ease; }
 .project-row:last-child { border-bottom:0; }
 .project-row:hover { background:rgba(101,166,255,.035); }
 .project-name { font-weight:670; letter-spacing:-.01em; }
@@ -73,6 +73,8 @@ h3 { font-size:.95rem; }
 .status.current,.status.done { color:var(--green); background:rgba(108,227,164,.08); border-color:rgba(108,227,164,.2); }
 .status.pending,.status.in-progress { color:var(--amber); background:rgba(255,190,92,.08); border-color:rgba(255,190,92,.2); }
 .status.finalized,.status.todo { color:#a8b7c4; background:rgba(168,183,196,.07); }
+.status.project-type { color:var(--blue); background:rgba(101,166,255,.08); border-color:rgba(101,166,255,.22); }
+.project-statuses { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; }
 .progress-wrap { display:grid; gap:.35rem; }
 .progress-label { display:flex; justify-content:space-between; color:var(--muted); font-size:.73rem; }
 .progress { height:.38rem; border-radius:999px; background:rgba(142,190,221,.12); overflow:hidden; }
