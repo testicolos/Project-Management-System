@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Download, FileText, Pencil, Plus, Upload } from "lucide-react";
+import { ArrowLeft, Download, FileText, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getCompaniesForUser, getProjectForUser, getProjectTypes } from "@/lib/data";
@@ -10,7 +10,8 @@ import { TaskForm } from "@/components/task-form";
 import { ProgressBar, StatusBadge, TypeBadge } from "@/components/status-badge";
 import { Flash } from "@/components/flash";
 import { TaskStatusSelect } from "@/components/task-status-select";
-import { createProjectNote, deleteDocument } from "@/app/actions";
+import { ConfirmSubmit } from "@/components/confirm-submit";
+import { createProjectNote, deleteDocument, deleteProject } from "@/app/actions";
 
 export default async function ProjectPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ success?: string; error?: string }> }) {
   const user = await requireUser();
@@ -22,7 +23,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     <Link href={`/projects?company=${project.companyId}`} className="button ghost" style={{ marginBottom: ".7rem" }}><ArrowLeft /> Back to company portfolio</Link>
     <Flash success={flash.success} error={flash.error} />
     <section className="detail-hero">
-      <div className="detail-title"><div><div className="eyebrow">{project.companyName} · {project.companyCode}</div><h1>{project.name}</h1><p className="lede">{project.description || "No project description yet."}</p></div><div className="toolbar"><StatusBadge status={project.status} /><TypeBadge type={project.projectTypeName} />{isAdmin && <Modal title="Edit project" trigger={<button type="button" className="button secondary"><Pencil /> Edit</button>}><ProjectForm companies={companies} projectTypes={projectTypes} project={project} /></Modal>}</div></div>
+      <div className="detail-title"><div><div className="eyebrow">{project.companyName} · {project.companyCode}</div><h1>{project.name}</h1><p className="lede">{project.description || "No project description yet."}</p></div><div className="toolbar"><StatusBadge status={project.status} /><TypeBadge type={project.projectTypeName} />{isAdmin && <Modal title="Edit project" trigger={<button type="button" className="button secondary"><Pencil /> Edit</button>}><ProjectForm companies={companies} projectTypes={projectTypes} project={project} /></Modal>}{isAdmin && <form action={deleteProject}><input type="hidden" name="id" value={project.id} /><ConfirmSubmit confirmText={`Delete ${project.name}? Its tasks, notes, and documents will also be deleted.`}><Trash2 /> Delete</ConfirmSubmit></form>}</div></div>
       <div className="detail-meta"><div className="detail-stat"><span>Cost</span><strong>{formatQar(project.costQar)}</strong></div><div className="detail-stat"><span>Start date</span><strong>{formatDate(project.startDate)}</strong></div><div className="detail-stat"><span>Target date</span><strong>{formatDate(project.targetDate)}</strong></div><div className="detail-stat" style={{ minWidth: "12rem", flex: 1 }}><ProgressBar value={project.progress} /></div></div>
     </section>
     <div className="grid-two">
