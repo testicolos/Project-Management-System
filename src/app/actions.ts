@@ -1,13 +1,13 @@
 "use server";
 
 import { compare, hash } from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { companies, documents, projectNotes, projects, tasks, userCompanyAccess, users } from "@/db/schema";
+import { companies, documents, projectNotes, projects, projectTypes, tasks, userCompanyAccess, users } from "@/db/schema";
 import { assertCompanyAccess, clearSession, requireAdmin, requireUser } from "@/lib/auth";
-import { companySchema, passwordSchema, projectNoteSchema, projectSchema, taskSchema, userSchema } from "@/lib/validation";
+import { companySchema, passwordSchema, projectNoteSchema, projectSchema, projectTypeSchema, taskSchema, userSchema } from "@/lib/validation";
 import { qatarLocalToDate } from "@/lib/utils";
 
 function value(formData: FormData, key: string) {
@@ -46,11 +46,56 @@ export async function createCompany(formData: FormData) {
   to("/companies", "success", "Company created");
 }
 
+export async function deleteCompany(formData: FormData) {
+  await requireAdmin();
+  const id = value(formData, "id");
+  try {
+    const [usage] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.companyId, id));
+    if (usage.count > 0) throw new Error("Delete this company's projects first");
+    await db.delete(companies).where(eq(companies.id, id));
+    revalidatePath("/companies");
+    revalidatePath("/");
+  } catch (error) {
+    to("/companies", "error", message(error));
+  }
+  to("/companies", "success", "Company deleted");
+}
+
+export async function createProjectType(formData: FormData) {
+  await requireAdmin();
+  try {
+    const name = projectTypeSchema.parse(value(formData, "name"));
+    const duplicate = await db.select({ id: projectTypes.id }).from(projectTypes).where(sql`lower(${projectTypes.name}) = lower(${name})`).limit(1);
+    if (duplicate.length) throw new Error("That project type already exists");
+    await db.insert(projectTypes).values({ name });
+    revalidatePath("/project-types");
+    revalidatePath("/projects");
+  } catch (error) {
+    to("/project-types", "error", message(error));
+  }
+  to("/project-types", "success", "Project type added");
+}
+
+export async function deleteProjectType(formData: FormData) {
+  await requireAdmin();
+  const id = value(formData, "id");
+  try {
+    const [usage] = await db.select({ count: sql<number>`count(*)::int` }).from(projects).where(eq(projects.projectTypeId, id));
+    if (usage.count > 0) throw new Error("This project type is in use and cannot be deleted");
+    await db.delete(projectTypes).where(eq(projectTypes.id, id));
+    revalidatePath("/project-types");
+    revalidatePath("/projects");
+  } catch (error) {
+    to("/project-types", "error", message(error));
+  }
+  to("/project-types", "success", "Project type deleted");
+}
+
 export async function createProject(formData: FormData) {
   const admin = await requireAdmin();
   try {
     const input = projectSchema.parse({
-      companyId: value(formData, "companyId"), name: value(formData, "name"), description: value(formData, "description"),
+      companyId: value(formData, "companyId"), projectTypeId: value(formData, "projectTypeId"), name: value(formData, "name"), description: value(formData, "description"),
       status: value(formData, "status"), costQar: value(formData, "costQar"), startDate: value(formData, "startDate"),
       targetDate: value(formData, "targetDate"), generalNotes: value(formData, "generalNotes"),
     });
@@ -75,7 +120,7 @@ export async function updateProject(formData: FormData) {
   const id = value(formData, "id");
   try {
     const input = projectSchema.parse({
-      companyId: value(formData, "companyId"), name: value(formData, "name"), description: value(formData, "description"),
+      companyId: value(formData, "companyId"), projectTypeId: value(formData, "projectTypeId"), name: value(formData, "name"), description: value(formData, "description"),
       status: value(formData, "status"), costQar: value(formData, "costQar"), startDate: value(formData, "startDate"),
       targetDate: value(formData, "targetDate"), generalNotes: value(formData, "generalNotes"),
     });
@@ -92,6 +137,22 @@ export async function updateProject(formData: FormData) {
     to(`/projects/${id}`, "error", message(error));
   }
   to(`/projects/${id}`, "success", "Project updated");
+}
+
+export async function deleteProject(formData: FormData) {
+  const admin = await requireAdmin();
+  const id = value(formData, "id");
+  try {
+    const [project] = await db.select({ companyId: projects.companyId }).from(projects).where(eq(projects.id, id)).limit(1);
+    if (!project) throw new Error("Project not found");
+    assertCompanyAccess(admin, project.companyId);
+    await db.delete(projects).where(eq(projects.id, id));
+    revalidatePath("/");
+    revalidatePath("/projects");
+  } catch (error) {
+    to(`/projects/${id}`, "error", message(error));
+  }
+  to("/projects", "success", "Project deleted");
 }
 
 export async function createTask(formData: FormData) {

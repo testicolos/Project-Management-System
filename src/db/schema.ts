@@ -17,6 +17,12 @@ export const companies = pgTable("companies", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [uniqueIndex("companies_code_unique").on(table.code)]);
 
+export const projectTypes = pgTable("project_types", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 80 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("project_types_name_unique").on(table.name)]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 120 }).notNull(),
@@ -43,6 +49,7 @@ export const userCompanyAccess = pgTable("user_company_access", {
 export const projects = pgTable("projects", {
   id: uuid("id").defaultRandom().primaryKey(),
   companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "restrict" }),
+  projectTypeId: uuid("project_type_id").references(() => projectTypes.id, { onDelete: "restrict" }),
   name: varchar("name", { length: 180 }).notNull(),
   description: text("description").default("").notNull(),
   status: projectStatus("status").default("PENDING").notNull(),
@@ -55,6 +62,7 @@ export const projects = pgTable("projects", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [
   index("projects_company_idx").on(table.companyId),
+  index("projects_project_type_idx").on(table.projectTypeId),
   index("projects_status_idx").on(table.status),
 ]);
 
